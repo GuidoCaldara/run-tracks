@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import Constants from "expo-constants";
 const statusBarHeight = Constants.statusBarHeight;
 import SafeViewAndroid from "../style/GlobalSafeArea";
@@ -17,11 +17,26 @@ import { secondsToTime } from "../utils/secondsToTime";
 import { speedToPace } from "../utils/speedToPace";
 import { convertDate } from "../utils/utcToDate";
 import { Feather } from "@expo/vector-icons";
-
+import { db } from "../firebase/Firebase";
+import { Context as ActivityDetailsContext } from "../context/ActivityDetailsContext";
 const TrackDetailsScreen = ({ route, navigation }) => {
   const [map, setMap] = useState(null);
+  const { removeActivity } = useContext(ActivityDetailsContext);
   const run = route.params.run;
   const timer = secondsToTime(run.duration);
+
+  const deleteRun = () => {
+    var selectedRun = db.collection("runs").where("date", "==", run.date);
+    selectedRun.get().then((snapshot) => {
+      snapshot.forEach((data) => {
+        data.ref.delete();
+        removeActivity(run);
+        navigation.navigate("List", {
+          screen: "List",
+        });
+      });
+    });
+  };
 
   const speed = ((run.distance * 1000) / run.duration).toFixed(2);
   return (
@@ -30,12 +45,7 @@ const TrackDetailsScreen = ({ route, navigation }) => {
       forceInset={{ top: "always", bottom: "always" }}
     >
       <View style={styles.upperScreen}>
-        <TouchableOpacity
-          style={styles.trashIcon}
-          onPress={() => {
-            deleteRun("TrackCreateScreen");
-          }}
-        >
+        <TouchableOpacity style={styles.trashIcon} onPress={deleteRun}>
           <Feather name="trash" size={16} color="gray" />
         </TouchableOpacity>
         {run.date ? (
