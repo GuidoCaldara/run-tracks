@@ -6,9 +6,12 @@ const activityReducer = (state, action) => {
     case "set_activity_list":
       return { ...state, activities: action.payload };
     case "add_activity":
-      debugger;
-      console.log("adding", action.payload);
       return { ...state, activities: [...state.activities, action.payload] };
+    case "remove_activity":
+      const newList = state.activities.filter(
+        (a) => a.date !== action.payload.date
+      );
+      return { ...state, activities: newList };
     case "set_activity_on_focus":
       return { ...state, date: action.payload };
     default:
@@ -26,6 +29,12 @@ const addActivity = (dispatch) => {
     dispatch({ type: "add_activity", payload: activity });
   };
 };
+const removeActivity = (dispatch) => {
+  return (activity) => {
+    dispatch({ type: "remove_activity", payload: activity });
+  };
+};
+
 const setActivityOnFocus = (dispatch) => {
   return (date) => {
     dispatch({ type: "set_activity_on_focus", payload: date });
@@ -34,6 +43,6 @@ const setActivityOnFocus = (dispatch) => {
 
 export const { Provider, Context } = CreateDataContext(
   activityReducer,
-  { setActivityList, setActivityOnFocus, addActivity },
+  { setActivityList, setActivityOnFocus, addActivity, removeActivity },
   { activities: [], date: null }
 );

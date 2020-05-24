@@ -25,7 +25,7 @@ const SummaryCard = ({ datas }) => {
       <View style={styles.summaryCardRow}>
         <View style={styles.summaryCardCell}>
           <Text style={styles.summaryCardNumber}>
-            {datas.totalDistance}
+            {datas.totalDistance.toFixed(2)}
             <Text style={styles.unitText}>km</Text>
           </Text>
           <Text style={styles.summaryCardLabel}>Total Distance</Text>
