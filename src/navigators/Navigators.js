@@ -14,6 +14,7 @@ import { Context as AuthContext } from "../context/AuthContext";
 import firebase, { db } from "../firebase/Firebase";
 import { createStackNavigator } from "@react-navigation/stack";
 const Stack = createStackNavigator();
+import { Provider as TrackingProvider } from "../context/TrackingContext";
 
 const MainNavigator = () => {
   const { setCurrentUser } = useContext(AuthContext);
@@ -41,15 +42,17 @@ const MainNavigator = () => {
 
   if (session.user && session.user.uid) {
     return (
-      <Stack.Navigator>
-        <Stack.Screen
-          options={{ headerShown: false }}
-          name="List"
-          component={TrackNavigator}
-        />
-        <Stack.Screen name="Details" component={TrackDetailsNavigator} />
-        <Stack.Screen name="EndTrack" component={EndTrackScreen} />
-      </Stack.Navigator>
+      <TrackingProvider>
+        <Stack.Navigator>
+          <Stack.Screen
+            options={{ headerShown: false }}
+            name="List"
+            component={TrackNavigator}
+          />
+          <Stack.Screen name="Details" component={TrackDetailsNavigator} />
+          <Stack.Screen name="EndTrack" component={EndTrackScreen} />
+        </Stack.Navigator>
+      </TrackingProvider>
     );
   } else if (session.user == false) {
     return (

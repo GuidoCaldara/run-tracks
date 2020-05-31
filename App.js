@@ -10,16 +10,12 @@ import { Provider as AuthProvider } from "./src/context/AuthContext";
 import { Provider as RouteProvider } from "./src/context/RouteContext";
 import { Provider as TimerProvider } from "./src/context/TimerContext";
 import { Provider as ActivityDetailsProvider } from "./src/context/ActivityDetailsContext";
-import {
-  LoginNavigator,
-  TrackNavigator,
-  BottomNavigator,
-  MainNavigator,
-} from "./src/navigators/Navigators";
+import { MainNavigator } from "./src/navigators/Navigators";
 import { navigationRef } from "./src/RootNavigation";
 import { Context as AuthContext } from "./src/context/AuthContext";
 import { Context as RouteContext } from "./src/context/RouteContext";
 import { Context as ActivityDetailsContext } from "./src/context/ActivityDetailsContext";
+import { Context as TrackingContext } from "./src/context/TrackingContext";
 import firebase from "./src/firebase/Firebase";
 
 export default function App() {

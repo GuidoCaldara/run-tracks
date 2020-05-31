@@ -13,15 +13,16 @@ import {
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { MaterialIcons } from "@expo/vector-icons";
-
+import { speedToPace } from "../utils/speedToPace";
 import Map from "../compoonents/map/Map";
 import Timer from "../compoonents/Timer";
+import Alert from "../compoonents/Alert";
 import ActionButton from "../compoonents/map/ActionButton";
 const haversine = require("haversine");
 import { Context as TimerContext } from "../context/TimerContext";
+import { Context as TrackingContext } from "../context/TrackingContext";
 import * as BackgroundFetch from "expo-background-fetch";
 import GpsStatus from "../compoonents/GpsStatus";
-import { speedToPace } from "../utils/speedToPace";
 import { secondsToTime } from "../utils/secondsToTime";
 let routeArray = [];
 const routeDistance = 0;
@@ -31,38 +32,48 @@ let setTrackRouteFn = (data) => data;
 let setLastSegmentFn = (data) => data;
 
 const TrackCreateScreen = ({ route, navigation }) => {
-  const [distance, setDistance] = useState(0);
   const [Km, setKm] = useState(1);
-  const [KmSegments, setKmSegments] = useState([]);
-  const [KmStartedAt, setKmStartedAt] = useState(null);
+  const [kmStartedAt, setKmStartedAt] = useState(null);
   const [altitudeProfile, setAltitudeProfile] = useState([]);
+  const [showAlert, setShowAlert] = useState(false);
   const [altitude, setAltitude] = useState(null);
   const [lastSegment, setLastSegment] = useState(0);
   const [liveData, setLiveData] = useState({});
   const [mapCenter, setMapCenter] = useState(null);
-  const [startedAt, setStartedAt] = useState(null);
-  const [currentSpeed, setCurrentSpeed] = useState();
-  const [accuracy, setAccuracy] = useState(20);
-  const [trackRoute, setTrackRoute] = useState([]);
   const [recording, setRecording] = useState("off");
   const [clockInterval, setClockInterval] = useState(null);
   const [clockActive, setClockActive] = useState(false);
   const [map, setMap] = useState(null);
-  setLiveDataFn = setLiveData;
-  setTrackRouteFn = setTrackRoute;
-  setLastSegmentFn = setLastSegment;
   const { addSecond, resetTimer, reStartTimer } = useContext(TimerContext);
   const { duration } = useContext(TimerContext).state;
+  const {
+    updateLiveData,
+    updateDistance,
+    updateSegments,
+    updateTrackRoute,
+    updateStartedAt,
+    resetTrack,
+  } = useContext(TrackingContext);
+  setTrackRouteFn = updateTrackRoute;
+  const {
+    currentSpeed,
+    distance,
+    kmSegments,
+    trackRoute,
+    startedAt,
+    accuracy,
+  } = useContext(TrackingContext).state;
+  setLiveDataFn = setLiveData;
+  setLastSegmentFn = setLastSegment;
+
   const resetDatas = () => {
     routeArray = [];
+    resetTrack();
     setAltitudeProfile([]);
-    setTrackRoute([]);
-    setDistance(0);
     resetTimer();
-    setKmSegments([]);
     setKm(1);
     setLastSegment(0);
-    setStartedAt(0);
+    updateStartedAt(0);
   };
 
   //reomve the bottom bar when navigation is on
@@ -80,7 +91,7 @@ const TrackCreateScreen = ({ route, navigation }) => {
         ["distance", distance.toString()],
         ["duration", duration.toString()],
         ["date", startedAt.toString()],
-        ["kmPartials", JSON.stringify(KmSegments)],
+        ["kmPartials", JSON.stringify(kmSegments)],
         ["unsavedTrack", "true"],
       ],
       () => {
@@ -127,7 +138,7 @@ const TrackCreateScreen = ({ route, navigation }) => {
     const unsubscribe = navigation.addListener("focus", async () => {
       startGpsTracker();
       if (route.params && route.params.resetRecording) {
-        await resetDatas();
+        resetDatas();
       }
     });
     return unsubscribe;
@@ -136,10 +147,14 @@ const TrackCreateScreen = ({ route, navigation }) => {
   //Update state based on the location info from the background worker
   useEffect(() => {
     const { latitude, longitude, accuracy, speed, altitude } = liveData;
-    console.log(altitude);
-    setAltitude(altitude);
-    setCurrentSpeed(speedToPace(speed));
-    setAccuracy(accuracy);
+    updateLiveData({
+      currentSpeed: speedToPace(speed),
+      accuracy,
+      latitude,
+      longitude,
+    });
+    //console.log(altitude);
+    // setAltitude(altitude);
     if (latitude) {
       setMapCenter({ latitude, longitude });
     }
@@ -149,17 +164,16 @@ const TrackCreateScreen = ({ route, navigation }) => {
   useEffect(() => {
     const newDistance = distance + lastSegment;
     const deltaDistance = newDistance - distance;
-    console.log(deltaDistance);
-    setDistance(newDistance);
+    updateDistance(newDistance);
     if (deltaDistance > 0.002) {
       const newProfile = [newDistance, altitude];
       setAltitudeProfile((altitudeProfile) => [...altitudeProfile, newProfile]);
     }
     if (newDistance > Km) {
-      const kmDuration = Math.floor(Date.now() / 1000) - KmStartedAt;
+      const kmDuration = Math.floor(Date.now() / 1000) - kmStartedAt;
       setKmStartedAt(Math.floor(Date.now() / 1000));
       setKm(Km + 1);
-      setKmSegments((KmSegments) => KmSegments.concat(kmDuration));
+      updateSegments(kmDuration);
     }
   }, [lastSegment]);
 
@@ -218,11 +232,9 @@ const TrackCreateScreen = ({ route, navigation }) => {
 
   //Start to record a new track. It reset all the states
   const startRecording = async () => {
-    console.log("a");
     resetDatas();
-    console.log("b");
     setRecording("on");
-    setStartedAt(Math.floor(Date.now() / 1000));
+    updateStartedAt(Math.floor(Date.now() / 1000));
     setKmStartedAt(Math.floor(Date.now() / 1000));
     startClock();
     await AsyncStorage.setItem("recording", "on");
@@ -246,6 +258,7 @@ const TrackCreateScreen = ({ route, navigation }) => {
     setRecording("off");
     stopClock();
     storeAsyncRoute();
+    setShowAlert(false);
   };
 
   const setMapRef = (map) => {
@@ -257,6 +270,16 @@ const TrackCreateScreen = ({ route, navigation }) => {
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "#282C34", paddingTop: 20 }}
     >
+      {showAlert ? (
+        <Alert
+          confirmButtonText="Terminate"
+          dismissButtonText="No, keep going!"
+          alertMessage="Confirm the end of the run"
+          dismissAction={() => setShowAlert(false)}
+          confirmAction={endRecording}
+        />
+      ) : null}
+
       <GpsStatus accuracy={accuracy} />
       <View
         style={{ ...styles.actionButton, bottom: recording == "on" ? 100 : 70 }}
@@ -266,7 +289,8 @@ const TrackCreateScreen = ({ route, navigation }) => {
           pauseRecording={pauseRecording}
           startRecording={startRecording}
           resumeRecording={resumeRecording}
-          endRecording={endRecording}
+          //endRecording={endRecording}
+          endRecording={() => setShowAlert(true)}
         />
       </View>
       <View style={styles.runDetailsContainer}>
