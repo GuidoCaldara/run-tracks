@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import MapView, { AnimatedRegion, Marker, Polyline } from "react-native-maps";
 import Timer from "../compoonents/Timer";
+import Alert from "../compoonents/Alert";
 import { secondsToTime } from "../utils/secondsToTime";
 import { speedToPace } from "../utils/speedToPace";
 import { convertDate } from "../utils/utcToDate";
@@ -21,6 +22,7 @@ import { db } from "../firebase/Firebase";
 import { Context as ActivityDetailsContext } from "../context/ActivityDetailsContext";
 const TrackDetailsScreen = ({ route, navigation }) => {
   const [map, setMap] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
   const { removeActivity } = useContext(ActivityDetailsContext);
   const run = route.params.run;
   const timer = secondsToTime(run.duration);
@@ -44,8 +46,22 @@ const TrackDetailsScreen = ({ route, navigation }) => {
       style={styles.mainContainer}
       forceInset={{ top: "always", bottom: "always" }}
     >
+      {showAlert ? (
+        <Alert
+          confirmButtonText="Yes, delete it!"
+          dismissButtonText="No, keep it!"
+          alertMessage="Are you sure you want to delete the activity?"
+          dismissAction={() => setShowAlert(false)}
+          confirmAction={deleteRun}
+        />
+      ) : null}
       <View style={styles.upperScreen}>
-        <TouchableOpacity style={styles.trashIcon} onPress={deleteRun}>
+        <TouchableOpacity
+          style={styles.trashIcon}
+          onPress={() => {
+            setShowAlert(true);
+          }}
+        >
           <Feather name="trash" size={16} color="gray" />
         </TouchableOpacity>
         {run.date ? (

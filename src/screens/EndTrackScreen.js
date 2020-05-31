@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import Constants from "expo-constants";
 const statusBarHeight = Constants.statusBarHeight;
 import SafeViewAndroid from "../style/GlobalSafeArea";
+import Alert from "../compoonents/Alert";
 
 import {
   AsyncStorage,
@@ -22,11 +23,14 @@ import { db } from "../firebase/Firebase";
 import { Feather } from "@expo/vector-icons";
 import { Context as AuthContext } from "../context/AuthContext";
 import { Context as ActivityDetailsContext } from "../context/ActivityDetailsContext";
+import { Context as TrackingContext } from "../context/TrackingContext";
+import { Context as TimerContext } from "../context/TimerContext";
 
 const EndTrackScreen = ({ navigation }) => {
   const user = useContext(AuthContext).state.user;
   const { addActivity } = useContext(ActivityDetailsContext);
   const [route, setRoute] = useState([]);
+  const [showAlert, setShowAlert] = useState(false);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -35,7 +39,10 @@ const EndTrackScreen = ({ navigation }) => {
   const [kmPartials, setKmPartials] = useState();
   const latitudeDelta = 0.01;
   const longitudeDelta = 0.01;
+  const { resetTrack } = useContext(TrackingContext);
+  const { resetTimer } = useContext(TimerContext);
 
+  console.log(kmPartials);
   navigation.setOptions({
     headerShown: false,
   });
@@ -76,12 +83,13 @@ const EndTrackScreen = ({ navigation }) => {
       partials: kmPartials,
       user: user.uid,
     };
-    console.log("Saving The Run");
     db.collection("runs")
       .add(newRun)
       .then((ref) => {
         addActivity(newRun);
         deleteRunFromStorage(() => {
+          resetTrack();
+          resetTimer();
           navigation.navigate("List", {
             screen: "List",
           });
@@ -90,6 +98,8 @@ const EndTrackScreen = ({ navigation }) => {
   };
 
   const deleteRunFromStorage = async (callback) => {
+    resetTrack();
+    resetTimer();
     await AsyncStorage.multiSet(
       [
         ["route", JSON.stringify([])],
@@ -105,6 +115,22 @@ const EndTrackScreen = ({ navigation }) => {
   const timer = secondsToTime(duration);
   return (
     <SafeAreaView style={SafeViewAndroid.AndroidSafeArea}>
+      {showAlert ? (
+        <Alert
+          confirmButtonText="Yes, delete it!"
+          dismissButtonText="Nope!"
+          alertMessage="Are you sure you want to delete the activity?"
+          dismissAction={() => setShowAlert(false)}
+          confirmAction={() => {
+            deleteRunFromStorage(() => {
+              navigation.navigate("Create", {
+                screen: "Create",
+              });
+            });
+          }}
+        />
+      ) : null}
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.startRecordBtn}
@@ -116,13 +142,8 @@ const EndTrackScreen = ({ navigation }) => {
       <View style={styles.upperScreen}>
         <TouchableOpacity
           style={styles.trashIcon}
-          onPress={() => {
-            deleteRunFromStorage(() => {
-              navigation.navigate("Create", {
-                screen: "Create",
-              });
-            });
-          }}
+          onPress={() => setShowAlert(true)}
+          // onPress={}
         >
           <Feather name="trash" size={16} color="gray" />
         </TouchableOpacity>

@@ -5,6 +5,7 @@ import { Context as ActivityDetailsContext } from "../context/ActivityDetailsCon
 const TrackSplitScreen = ({}) => {
   const { date, activities } = useContext(ActivityDetailsContext).state;
   const activity = activities.find((a) => a.date === date);
+  console.log("duration", activity.duration);
   const mapPartials = (activity) => {
     let secondsSum = 0;
     let kmSum = 0;
@@ -18,10 +19,12 @@ const TrackSplitScreen = ({}) => {
     });
     const lastSegment = {
       km: (activity.distance - kmSum).toFixed(1),
-      pace:
+      pace: (
         (activity.duration - secondsSum) /
-        (activity.distance - kmSum).toFixed(1),
+        (activity.distance - kmSum)
+      ).toFixed(0),
     };
+    console.log("lll", lastSegment);
     return [...partialsSegments, lastSegment];
   };
 

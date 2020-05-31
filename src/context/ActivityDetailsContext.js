@@ -6,7 +6,7 @@ const activityReducer = (state, action) => {
     case "set_activity_list":
       return { ...state, activities: action.payload };
     case "add_activity":
-      return { ...state, activities: [...state.activities, action.payload] };
+      return { ...state, activities: [action.payload, ...state.activities] };
     case "remove_activity":
       const newList = state.activities.filter(
         (a) => a.date !== action.payload.date
